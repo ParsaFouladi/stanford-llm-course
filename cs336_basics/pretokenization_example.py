@@ -1,5 +1,7 @@
 import os
 from typing import BinaryIO
+from cs336_basics.tokeniser.pre_tokeniser.pre_tokeniser import pre_tokenise_chunk
+from collections import Counter
 
 
 def find_chunk_boundaries(
@@ -50,13 +52,29 @@ def find_chunk_boundaries(
 
 
 ## Usage
-with open(..., "rb") as f:
-    num_processes = 4
-    boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
+def main(input_file: str):
+    with open(input_file, "rb") as f:
+        num_processes = 4
+        boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
+        pre_token_counts = Counter()
 
-    # The following is a serial implementation, but you can parallelize this
-    # by sending each start/end pair to a set of processes.
-    for start, end in zip(boundaries[:-1], boundaries[1:]):
-        f.seek(start)
-        chunk = f.read(end - start).decode("utf-8", errors="ignore")
-        # Run pre-tokenization on your chunk and store the counts for each pre-token
+        # The following is a serial implementation, but you can parallelize this
+        # by sending each start/end pair to a set of processes.
+        i = 0
+        for start, end in zip(boundaries[:-1], boundaries[1:]):
+            print(f"Processing chunk {i}")
+            f.seek(start)
+            chunk = f.read(end - start).decode("utf-8", errors="ignore")
+            # Run pre-tokenization on your chunk and store the counts for each pre-token
+
+            pre_token_counts+=pre_tokenise_chunk(chunk)
+            print(f"Chunk {i}: {len(chunk)} characters")
+            print(f"Total tokens: {len(pre_token_counts)}")
+            i+=1
+
+    sorted_pre_token_counts = sorted(pre_token_counts.items(), key=lambda x: x[1], reverse=True)
+    print(f"Sorted pre token counts: {sorted_pre_token_counts[:10]}")
+
+if __name__ == "__main__":
+    main('data/TinyStoriesV2-GPT4-valid.txt')
+
